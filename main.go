@@ -1,11 +1,12 @@
 package main
 
 import (
+	"io/ioutil"
 	"log"
 	"os"
-	"io/ioutil"
 	"path/filepath"
 	"time"
+
 	"github.com/fogleman/gg"
 
 	"github.com/gobuffalo/packr/v2"
@@ -17,27 +18,27 @@ func main() {
 	const P = 16
 
 	box := packr.New("myBox", "./resources")
-	
+
 	clippy, err := box.Find("clippy1080.png")
 	if err != nil {
-	  log.Fatal(err)
+		log.Fatal(err)
 	}
 
 	cpath := filepath.Join(os.TempDir(), "clippy1080.png")
-	err = ioutil.WriteFile(cpath,clippy,0777)
+	err = ioutil.WriteFile(cpath, clippy, 0777)
 	if err != nil {
-	  log.Fatal(err)
+		log.Fatal(err)
 	}
 
 	csans, err := box.Find("Comic Sans MS.ttf")
 	if err != nil {
-	  log.Fatal(err)
+		log.Fatal(err)
 	}
 
-	csanspath:= filepath.Join(os.TempDir(), "Comic Sans MS.ttf")
-	err = ioutil.WriteFile(csanspath,csans,0777)
+	csanspath := filepath.Join(os.TempDir(), "Comic Sans MS.ttf")
+	err = ioutil.WriteFile(csanspath, csans, 0777)
 	if err != nil {
-	  log.Fatal(err)
+		log.Fatal(err)
 	}
 
 	im1, err := gg.LoadPNG(cpath)
@@ -59,5 +60,5 @@ func main() {
 
 	dc.DrawStringWrapped(TEXT, 700, 300, 0.5, 0.5, W, 2, gg.AlignLeft)
 	tstamp := time.Now().Format("200601020304")
-	dc.SavePNG("clippy"+tstamp+".png")
+	dc.SavePNG("clippy" + tstamp + ".png")
 }
