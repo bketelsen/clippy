@@ -1,64 +1,80 @@
 package main
 
 import (
-	"io/ioutil"
+	"bytes"
+	_ "embed"
+	"flag"
+	"image"
+	_ "image/png"
 	"log"
-	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/fogleman/gg"
-
-	"github.com/gobuffalo/packr/v2"
+	"github.com/golang/freetype/truetype"
 )
 
+//go:embed resources/clippy1080.png
+var clippyPNG []byte
+
+//go:embed resources/ComicSansMS.ttf
+var comicSansFont []byte
+
 func main() {
-	const W = 1200
-	const H = 500
-	const P = 16
+	scale := flag.Float64("scale", 1.0, "Scale factor (0.5 = half size, 2.0 = double)")
+	width := flag.Int("width", 0, "Target width in pixels (maintains aspect ratio, overrides -scale)")
+	flag.Parse()
 
-	box := packr.New("myBox", "./resources")
+	if flag.NArg() < 1 {
+		log.Fatal("Usage: clippy [-scale 0.5] [-width 800] \"Your text here\"")
+	}
+	text := flag.Arg(0)
 
-	clippy, err := box.Find("clippy1080.png")
+	// Load image from embedded bytes
+	reader := bytes.NewReader(clippyPNG)
+	im, _, err := image.Decode(reader)
+	if err != nil {
+		log.Fatal(err)
+	}
+	iw, ih := im.Bounds().Dx(), im.Bounds().Dy()
+
+	// Calculate scale factor
+	scaleFactor := *scale
+	if *width > 0 {
+		scaleFactor = float64(*width) / float64(iw)
+	}
+
+	// Calculate output dimensions
+	outputW := int(float64(iw) * scaleFactor)
+	outputH := int(float64(ih) * scaleFactor)
+
+	// Parse font from embedded bytes
+	font, err := truetype.Parse(comicSansFont)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	cpath := filepath.Join(os.TempDir(), "clippy1080.png")
-	err = ioutil.WriteFile(cpath, clippy, 0777)
-	if err != nil {
-		log.Fatal(err)
-	}
+	// Scale font size proportionally
+	fontSize := 80.0 * scaleFactor
+	face := truetype.NewFace(font, &truetype.Options{Size: fontSize})
 
-	csans, err := box.Find("Comic Sans MS.ttf")
-	if err != nil {
-		log.Fatal(err)
-	}
+	// Create drawing context
+	dc := gg.NewContext(outputW, outputH)
+	dc.Scale(scaleFactor, scaleFactor)
 
-	csanspath := filepath.Join(os.TempDir(), "Comic Sans MS.ttf")
-	err = ioutil.WriteFile(csanspath, csans, 0777)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	im1, err := gg.LoadPNG(cpath)
-	if err != nil {
-		panic(err)
-	}
-	iw, ih := im1.Bounds().Dx(), im1.Bounds().Dy()
-
-	dc := gg.NewContext(iw, ih)
-
-	dc.SetRGB(1, 1, 1)
+	// Clear to transparent background
+	dc.SetRGBA(0, 0, 0, 0)
 	dc.Clear()
 	dc.SetRGB(0, 0, 0)
-	dc.DrawImage(im1, 0, 0)
-	TEXT := os.Args[1] // "It looks like you are trying to do a thing with some stuff and this should wrap."
-	if err := dc.LoadFontFace(csanspath, 80); err != nil {
-		panic(err)
-	}
+	dc.DrawImage(im, 0, 0)
 
-	dc.DrawStringWrapped(TEXT, 700, 300, 0.5, 0.5, W, 2, gg.AlignLeft)
+	// Draw text
+	dc.SetFontFace(face)
+	const textWidth = 1200
+	dc.DrawStringWrapped(text, 700, 300, 0.5, 0.5, textWidth, 2, gg.AlignLeft)
+
+	// Save output
 	tstamp := time.Now().Format("200601020304")
-	dc.SavePNG("clippy" + tstamp + ".png")
+	if err := dc.SavePNG("clippy" + tstamp + ".png"); err != nil {
+		log.Fatal(err)
+	}
 }

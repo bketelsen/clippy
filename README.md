@@ -9,19 +9,26 @@ clippy "My Text Here"
 
 This will output a file in the current directory called `clippy{DATESTAMP}.png`
 
+### Scaling Options
+
+```
+clippy -scale 0.5 "My Text Here"   # Half size output
+clippy -scale 2.0 "My Text Here"   # Double size output
+clippy -width 800 "My Text Here"   # 800px wide, height proportional
+```
+
 ## Building
 
 * Clone repo
-* go get -u github.com/gobuffalo/packr/v2/packr2
-* packr2 build
-* packr2 install
+* `go build`
+* `go install`
 
-Assumes Go 1.11 with GO111MODULE=on or Go 1.12.
+Requires Go 1.21 or later.
 
 ## Licenses
 MIT License.
 
-* Clippy is probably a registered trademark for Microsoft. 
+* Clippy is probably a registered trademark for Microsoft.
 * Comic Sans MS is probably owned by Microsoft too.
 
 This work is not affiliated with, or endorsed by Microsoft.
