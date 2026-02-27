@@ -11,9 +11,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/atotto/clipboard"
 	"github.com/fogleman/gg"
 	"github.com/golang/freetype/truetype"
+	"golang.design/x/clipboard"
 )
 
 //go:embed resources/clippy1080.png
@@ -31,7 +31,7 @@ func copyToClipboard(filepath string) {
 		return
 	}
 
-	err = clipboard.WriteAll(string(imageBytes))
+	err = clipboard.Write(clipboard.FmtImage, imageBytes)
 	if err != nil {
 		log.Printf("Failed to copy to clipboard: %v", err)
 		return
@@ -95,7 +95,11 @@ func main() {
 
 	// Save output
 	tstamp := time.Now().Format("200601020304")
-	if err := dc.SavePNG("clippy" + tstamp + ".png"); err != nil {
+	filename := "clippy" + tstamp + ".png"
+	if err := dc.SavePNG(filename); err != nil {
 		log.Fatal(err)
 	}
+
+	// Copy the generated image to clipboard
+	copyToClipboard(filename)
 }
