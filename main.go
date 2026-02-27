@@ -26,6 +26,12 @@ var comicSansFont []byte
 // Requires clipboard to be initialized via clipboard.Init() in main().
 // Errors are logged to stderr but do not stop execution.
 func copyToClipboard(filepath string) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("Clipboard write failed: %v", r)
+		}
+	}()
+
 	imageBytes, err := os.ReadFile(filepath)
 	if err != nil {
 		log.Printf("Failed to read image file: %v", err)
