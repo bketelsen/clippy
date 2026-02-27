@@ -31,12 +31,9 @@ func copyToClipboard(filepath string) {
 		return
 	}
 
-	err = clipboard.Write(clipboard.FmtImage, imageBytes)
-	if err != nil {
-		log.Printf("Failed to copy to clipboard: %v", err)
-		return
-	}
-
+	// Write to clipboard (returns a channel that signals completion)
+	done := clipboard.Write(clipboard.FmtImage, imageBytes)
+	<-done // Wait for write to complete
 	fmt.Println("✓ Image copied to clipboard")
 }
 
