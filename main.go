@@ -23,6 +23,7 @@ var clippyPNG []byte
 var comicSansFont []byte
 
 // copyToClipboard reads a PNG file and copies its contents to the system clipboard.
+// Requires clipboard to be initialized via clipboard.Init() in main().
 // Errors are logged to stderr but do not stop execution.
 func copyToClipboard(filepath string) {
 	imageBytes, err := os.ReadFile(filepath)
@@ -31,13 +32,18 @@ func copyToClipboard(filepath string) {
 		return
 	}
 
-	// Write to clipboard (returns a channel that signals completion)
+	// Write to clipboard (channel-based API; we wait to prevent early cleanup)
 	done := clipboard.Write(clipboard.FmtImage, imageBytes)
 	<-done // Wait for write to complete
 	fmt.Println("✓ Image copied to clipboard")
 }
 
 func main() {
+	// Initialize clipboard system early
+	if err := clipboard.Init(); err != nil {
+		log.Printf("Warning: clipboard not available: %v", err)
+	}
+
 	scale := flag.Float64("scale", 1.0, "Scale factor (0.5 = half size, 2.0 = double)")
 	width := flag.Int("width", 0, "Target width in pixels (maintains aspect ratio, overrides -scale)")
 	flag.Parse()
