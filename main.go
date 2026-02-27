@@ -4,11 +4,14 @@ import (
 	"bytes"
 	_ "embed"
 	"flag"
+	"fmt"
 	"image"
 	_ "image/png"
 	"log"
+	"os"
 	"time"
 
+	"github.com/atotto/clipboard"
 	"github.com/fogleman/gg"
 	"github.com/golang/freetype/truetype"
 )
@@ -18,6 +21,24 @@ var clippyPNG []byte
 
 //go:embed resources/ComicSansMS.ttf
 var comicSansFont []byte
+
+// copyToClipboard reads a PNG file and copies its contents to the system clipboard.
+// Errors are logged to stderr but do not stop execution.
+func copyToClipboard(filepath string) {
+	imageBytes, err := os.ReadFile(filepath)
+	if err != nil {
+		log.Printf("Failed to read image file: %v", err)
+		return
+	}
+
+	err = clipboard.WriteAll(string(imageBytes))
+	if err != nil {
+		log.Printf("Failed to copy to clipboard: %v", err)
+		return
+	}
+
+	fmt.Println("✓ Image copied to clipboard")
+}
 
 func main() {
 	scale := flag.Float64("scale", 1.0, "Scale factor (0.5 = half size, 2.0 = double)")
