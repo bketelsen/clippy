@@ -42,6 +42,7 @@ var comicSansFont []byte
 type options struct {
 	text        string
 	output      string
+	noClobber   bool
 	scale       float64
 	width       int
 	fontSize    float64
@@ -95,7 +96,12 @@ func run(args []string, stdout, stderr io.Writer, now func() time.Time) error {
 		return png.Encode(stdout, output)
 	}
 
-	file, err := os.Create(opts.output)
+	var file *os.File
+	if opts.noClobber {
+		file, err = os.OpenFile(opts.output, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o666)
+	} else {
+		file, err = os.Create(opts.output)
+	}
 	if err != nil {
 		return fmt.Errorf("create output: %w", err)
 	}
@@ -119,6 +125,7 @@ func parseOptions(args []string, stderr io.Writer) (options, error) {
 	fs.Float64Var(&opts.scale, "scale", opts.scale, "scale factor (0.5 = half size, 2 = double)")
 	fs.IntVar(&opts.width, "width", 0, "target width in pixels; overrides -scale")
 	fs.StringVar(&opts.output, "output", "", `output path, or "-" for standard output`)
+	fs.BoolVar(&opts.noClobber, "no-clobber", false, "fail if the output file already exists")
 	fs.Float64Var(&opts.fontSize, "font-size", opts.fontSize, "maximum font size")
 	fs.StringVar(&colorValue, "text-color", "#000000", "text color as #RRGGBB or #RRGGBBAA")
 	fs.StringVar(&alignValue, "align", "left", "text alignment: left, center, or right")
