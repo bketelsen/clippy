@@ -161,3 +161,35 @@ func TestDefaultOutputNameUsesSubsecondPrecision(t *testing.T) {
 		t.Fatalf("names collide: %q", a)
 	}
 }
+
+func TestRunNoClobberRejectsExistingOutput(t *testing.T) {
+	path := t.TempDir() + "/message.png"
+	now := func() time.Time { return time.Unix(0, 0) }
+
+	var firstStdout, stderr bytes.Buffer
+	if err := run([]string{"-output", path, "hello"}, &firstStdout, &stderr, now); err != nil {
+		t.Fatal(err)
+	}
+	if firstStdout.String() != path+"\n" {
+		t.Fatalf("first stdout = %q, want output filename", firstStdout.String())
+	}
+
+	var secondStdout bytes.Buffer
+	if err := run([]string{"-output", path, "-no-clobber", "hello"}, &secondStdout, &stderr, now); err == nil {
+		t.Fatal("run with -no-clobber unexpectedly overwrote existing output")
+	}
+	if secondStdout.Len() != 0 {
+		t.Fatalf("stdout = %q, want no success filename", secondStdout.String())
+	}
+}
+
+func TestRunNoClobberWritesPNGToStdout(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	now := func() time.Time { return time.Unix(0, 0) }
+	if err := run([]string{"-output", "-", "-no-clobber", "hello"}, &stdout, &stderr, now); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := png.Decode(bytes.NewReader(stdout.Bytes())); err != nil {
+		t.Fatalf("stdout is not a PNG: %v", err)
+	}
+}

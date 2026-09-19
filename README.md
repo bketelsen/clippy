@@ -20,6 +20,19 @@ clippy -output message.png "Hello" # Choose an output file
 clippy -output - "Hello" > message.png
 ```
 
+### Output Protection
+
+By default, Clippy overwrites an existing output file. Use `-no-clobber` to
+create a filesystem output file exclusively instead:
+
+```
+clippy -no-clobber -output message.png "Hello"
+```
+
+If the target file already exists, Clippy reports an error and leaves it
+unchanged. This exclusive creation is atomic. `-no-clobber` does not affect
+`-output -`; PNG bytes are still written to standard output.
+
 ### Text Options
 
 The speech bubble automatically grows and shrinks around the message. Text
