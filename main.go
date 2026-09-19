@@ -31,7 +31,7 @@ const (
 	minBubbleW   = 240
 )
 
-var bubbleColor = color.NRGBA{R: 255, G: 255, B: 190, A: 255}
+var defaultBubbleColor = color.NRGBA{R: 255, G: 255, B: 190, A: 255}
 
 //go:embed resources/clippy1080.png
 var clippyPNG []byte
@@ -46,6 +46,7 @@ type options struct {
 	width       int
 	fontSize    float64
 	textColor   color.Color
+	bubbleColor color.Color
 	align       gg.Align
 	textX       float64
 	textY       float64
@@ -60,6 +61,7 @@ func defaultOptions() options {
 		scale:       1,
 		fontSize:    baseFontSize,
 		textColor:   color.Black,
+		bubbleColor: defaultBubbleColor,
 		align:       gg.AlignLeft,
 		textX:       100,
 		textY:       100,
@@ -112,7 +114,7 @@ func run(args []string, stdout, stderr io.Writer, now func() time.Time) error {
 
 func parseOptions(args []string, stderr io.Writer) (options, error) {
 	opts := defaultOptions()
-	var colorValue, alignValue string
+	var colorValue, bubbleColorValue, alignValue string
 
 	fs := flag.NewFlagSet("clippy", flag.ContinueOnError)
 	fs.SetOutput(stderr)
@@ -121,6 +123,7 @@ func parseOptions(args []string, stderr io.Writer) (options, error) {
 	fs.StringVar(&opts.output, "output", "", `output path, or "-" for standard output`)
 	fs.Float64Var(&opts.fontSize, "font-size", opts.fontSize, "maximum font size")
 	fs.StringVar(&colorValue, "text-color", "#000000", "text color as #RRGGBB or #RRGGBBAA")
+	fs.StringVar(&bubbleColorValue, "bubble-color", "#FFFFBE", "bubble fill color as #RRGGBB or #RRGGBBAA")
 	fs.StringVar(&alignValue, "align", "left", "text alignment: left, center, or right")
 	fs.Float64Var(&opts.textX, "text-x", opts.textX, "left edge of the maximum text area")
 	fs.Float64Var(&opts.textY, "text-y", opts.textY, "top edge of the text")
@@ -146,6 +149,10 @@ func parseOptions(args []string, stderr io.Writer) (options, error) {
 	opts.textColor, _ = parseHexColor(colorValue)
 	if opts.textColor == nil {
 		return options{}, fmt.Errorf("invalid -text-color %q", colorValue)
+	}
+	opts.bubbleColor, _ = parseHexColor(bubbleColorValue)
+	if opts.bubbleColor == nil {
+		return options{}, fmt.Errorf("invalid -bubble-color %q", bubbleColorValue)
 	}
 	switch strings.ToLower(alignValue) {
 	case "left":
@@ -264,14 +271,14 @@ func drawBubbleAndText(dc *gg.Context, parsedFont *truetype.Font, opts options) 
 	dc.LineTo(pointerBaseX+45, bubbleBottom-2)
 	dc.LineTo(1650, 1100)
 	dc.ClosePath()
-	dc.SetColor(bubbleColor)
+	dc.SetColor(opts.bubbleColor)
 	dc.FillPreserve()
 	dc.SetColor(color.Black)
 	dc.SetLineWidth(bubbleStroke)
 	dc.Stroke()
 
 	dc.DrawRoundedRectangle(bubbleX, bubbleY, bubbleW, bubbleH, bubbleRadius)
-	dc.SetColor(bubbleColor)
+	dc.SetColor(opts.bubbleColor)
 	dc.FillPreserve()
 	dc.SetColor(color.Black)
 	dc.SetLineWidth(bubbleStroke)
