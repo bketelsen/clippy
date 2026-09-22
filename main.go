@@ -29,6 +29,20 @@ const (
 	bubbleRadius = 28
 	bubbleStroke = 8
 	minBubbleW   = 240
+
+	// Upper bounds for numeric flags. These are conservative relative to
+	// maxPixels: scale 2 produces 4780x3946 (18,861,880 pixels), while width
+	// 5000 produces about 20.6 million pixels, both well below 100 million.
+	// The remaining limits permit substantial customization while bounding
+	// font construction, the font-size decrement loop, and extreme layout
+	// geometry.
+	maxScale       = 2
+	maxWidth       = 5000
+	maxFontSize    = 500
+	maxTextWidth   = 5000
+	maxTextHeight  = 5000
+	maxPadding     = 1000
+	maxLineSpacing = 10
 )
 
 var bubbleColor = color.NRGBA{R: 255, G: 255, B: 190, A: 255}
@@ -116,18 +130,18 @@ func parseOptions(args []string, stderr io.Writer) (options, error) {
 
 	fs := flag.NewFlagSet("clippy", flag.ContinueOnError)
 	fs.SetOutput(stderr)
-	fs.Float64Var(&opts.scale, "scale", opts.scale, "scale factor (0.5 = half size, 2 = double)")
-	fs.IntVar(&opts.width, "width", 0, "target width in pixels; overrides -scale")
+	fs.Float64Var(&opts.scale, "scale", opts.scale, fmt.Sprintf("scale factor (0.5 = half size, 2 = double); maximum %g", float64(maxScale)))
+	fs.IntVar(&opts.width, "width", 0, fmt.Sprintf("target width in pixels; overrides -scale; maximum %d", maxWidth))
 	fs.StringVar(&opts.output, "output", "", `output path, or "-" for standard output`)
-	fs.Float64Var(&opts.fontSize, "font-size", opts.fontSize, "maximum font size")
+	fs.Float64Var(&opts.fontSize, "font-size", opts.fontSize, fmt.Sprintf("maximum font size; maximum %d", maxFontSize))
 	fs.StringVar(&colorValue, "text-color", "#000000", "text color as #RRGGBB or #RRGGBBAA")
 	fs.StringVar(&alignValue, "align", "left", "text alignment: left, center, or right")
 	fs.Float64Var(&opts.textX, "text-x", opts.textX, "left edge of the maximum text area")
 	fs.Float64Var(&opts.textY, "text-y", opts.textY, "top edge of the text")
-	fs.Float64Var(&opts.textWidth, "text-width", opts.textWidth, "maximum text width before wrapping")
-	fs.Float64Var(&opts.textHeight, "text-height", opts.textHeight, "maximum text height")
-	fs.Float64Var(&opts.padding, "padding", opts.padding, "space between the text and bubble edge")
-	fs.Float64Var(&opts.lineSpacing, "line-spacing", opts.lineSpacing, "multiplier between text lines")
+	fs.Float64Var(&opts.textWidth, "text-width", opts.textWidth, fmt.Sprintf("maximum text width before wrapping; maximum %d", maxTextWidth))
+	fs.Float64Var(&opts.textHeight, "text-height", opts.textHeight, fmt.Sprintf("maximum text height; maximum %d", maxTextHeight))
+	fs.Float64Var(&opts.padding, "padding", opts.padding, fmt.Sprintf("space between the text and bubble edge; maximum %d", maxPadding))
+	fs.Float64Var(&opts.lineSpacing, "line-spacing", opts.lineSpacing, fmt.Sprintf("multiplier between text lines; maximum %d", maxLineSpacing))
 	fs.Usage = func() {
 		fmt.Fprintln(stderr, `Usage: clippy [options] "Your text here"`)
 		fmt.Fprintln(stderr, "Options:")
@@ -165,18 +179,48 @@ func parseOptions(args []string, stderr io.Writer) (options, error) {
 
 func validateOptions(opts options) error {
 	switch {
+	case math.IsNaN(opts.scale) || math.IsInf(opts.scale, 0):
+		return errors.New("-scale must be finite")
+	case math.IsNaN(opts.fontSize) || math.IsInf(opts.fontSize, 0):
+		return errors.New("-font-size must be finite")
+	case math.IsNaN(opts.textX) || math.IsInf(opts.textX, 0):
+		return errors.New("-text-x must be finite")
+	case math.IsNaN(opts.textY) || math.IsInf(opts.textY, 0):
+		return errors.New("-text-y must be finite")
+	case math.IsNaN(opts.textWidth) || math.IsInf(opts.textWidth, 0):
+		return errors.New("-text-width must be finite")
+	case math.IsNaN(opts.textHeight) || math.IsInf(opts.textHeight, 0):
+		return errors.New("-text-height must be finite")
+	case math.IsNaN(opts.padding) || math.IsInf(opts.padding, 0):
+		return errors.New("-padding must be finite")
+	case math.IsNaN(opts.lineSpacing) || math.IsInf(opts.lineSpacing, 0):
+		return errors.New("-line-spacing must be finite")
 	case opts.scale <= 0:
 		return errors.New("-scale must be greater than zero")
+	case opts.scale > maxScale:
+		return fmt.Errorf("-scale must be at most %g", float64(maxScale))
 	case opts.width < 0:
 		return errors.New("-width cannot be negative")
+	case opts.width > maxWidth:
+		return fmt.Errorf("-width must be at most %d", maxWidth)
 	case opts.fontSize < minFontSize:
 		return fmt.Errorf("-font-size must be at least %d", minFontSize)
+	case opts.fontSize > maxFontSize:
+		return fmt.Errorf("-font-size must be at most %d", maxFontSize)
 	case opts.textWidth <= 0 || opts.textHeight <= 0:
 		return errors.New("-text-width and -text-height must be greater than zero")
+	case opts.textWidth > maxTextWidth:
+		return fmt.Errorf("-text-width must be at most %d", maxTextWidth)
+	case opts.textHeight > maxTextHeight:
+		return fmt.Errorf("-text-height must be at most %d", maxTextHeight)
 	case opts.padding < 0:
 		return errors.New("-padding cannot be negative")
+	case opts.padding > maxPadding:
+		return fmt.Errorf("-padding must be at most %d", maxPadding)
 	case opts.lineSpacing <= 0:
 		return errors.New("-line-spacing must be greater than zero")
+	case opts.lineSpacing > maxLineSpacing:
+		return fmt.Errorf("-line-spacing must be at most %d", maxLineSpacing)
 	}
 	return nil
 }

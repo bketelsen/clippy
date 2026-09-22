@@ -42,6 +42,80 @@ func TestParseOptionsRejectsInvalidValues(t *testing.T) {
 	}
 }
 
+func TestParseOptionsRejectsNonFiniteAndOversizedValues(t *testing.T) {
+	tests := []struct {
+		name    string
+		args    []string
+		wantErr string
+	}{
+		{"scale NaN", []string{"-scale", "NaN", "text"}, "-scale"},
+		{"scale +Inf", []string{"-scale", "+Inf", "text"}, "-scale"},
+		{"scale -Inf", []string{"-scale", "-Inf", "text"}, "-scale"},
+		{"font-size NaN", []string{"-font-size", "NaN", "text"}, "-font-size"},
+		{"text-x NaN", []string{"-text-x", "NaN", "text"}, "-text-x"},
+		{"text-y NaN", []string{"-text-y", "NaN", "text"}, "-text-y"},
+		{"text-width NaN", []string{"-text-width", "NaN", "text"}, "-text-width"},
+		{"text-height NaN", []string{"-text-height", "NaN", "text"}, "-text-height"},
+		{"padding NaN", []string{"-padding", "NaN", "text"}, "-padding"},
+		{"line-spacing NaN", []string{"-line-spacing", "NaN", "text"}, "-line-spacing"},
+		{"width NaN rejected by parser", []string{"-width", "NaN", "text"}, "-width"},
+		{"scale above max", []string{"-scale", "3", "text"}, "-scale"},
+		{"width above max", []string{"-width", "6000", "text"}, "-width"},
+		{"font-size above max", []string{"-font-size", "5000", "text"}, "-font-size"},
+		{"text-width above max", []string{"-text-width", "6000", "text"}, "-text-width"},
+		{"text-height above max", []string{"-text-height", "6000", "text"}, "-text-height"},
+		{"padding above max", []string{"-padding", "1001", "text"}, "-padding"},
+		{"line-spacing above max", []string{"-line-spacing", "11", "text"}, "-line-spacing"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := parseOptions(tt.args, &bytes.Buffer{})
+			if err == nil {
+				t.Fatalf("parseOptions(%q) unexpectedly succeeded", tt.args)
+			}
+			if !strings.Contains(err.Error(), tt.wantErr) {
+				t.Fatalf("parseOptions(%q) error = %q, want substring %q", tt.args, err.Error(), tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestParseOptionsAcceptsExactMaxima(t *testing.T) {
+	tests := [][]string{
+		{"-scale", "2", "text"},
+		{"-width", "5000", "text"},
+		{"-font-size", "500", "text"},
+		{"-text-width", "5000", "text"},
+		{"-text-height", "5000", "text"},
+		{"-padding", "1000", "text"},
+		{"-line-spacing", "10", "text"},
+	}
+	for _, args := range tests {
+		if _, err := parseOptions(args, &bytes.Buffer{}); err != nil {
+			t.Errorf("parseOptions(%q) unexpectedly failed: %v", args, err)
+		}
+	}
+}
+
+func TestParseOptionsHelpDocumentsMaxima(t *testing.T) {
+	var stderr bytes.Buffer
+	_, err := parseOptions([]string{"-help"}, &stderr)
+	if err == nil {
+		t.Fatal("parseOptions(-help) unexpectedly succeeded")
+	}
+	help := stderr.String()
+	tests := []string{
+		"maximum 2",
+		"maximum 5000",
+		"maximum 500",
+	}
+	for _, want := range tests {
+		if !strings.Contains(help, want) {
+			t.Errorf("help output missing %q:\n%s", want, help)
+		}
+	}
+}
+
 func TestRenderDimensions(t *testing.T) {
 	tests := []struct {
 		name string
