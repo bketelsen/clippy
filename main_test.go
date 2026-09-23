@@ -5,6 +5,7 @@ import (
 	"image"
 	"image/color"
 	"image/png"
+	"math"
 	"strings"
 	"testing"
 	"time"
@@ -61,6 +62,92 @@ func TestRenderDimensions(t *testing.T) {
 				t.Fatalf("bounds = %v, want %v", got.Bounds(), tt.want)
 			}
 		})
+	}
+}
+
+func TestRenderRejectsInvalidOutputDimensions(t *testing.T) {
+	tests := []struct {
+		name    string
+		width   int
+		wantErr string
+	}{
+		{"too large", 20000, "requested image is too large"},
+		{"smaller than one pixel", 1, "requested dimensions are smaller than one pixel"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			opts := defaultOptions()
+			opts.text = "Hi"
+			opts.width = tt.width
+			got, err := render(opts)
+			if got != nil {
+				t.Fatalf("render() image = %v, want nil", got)
+			}
+			if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+				t.Fatalf("render() error = %v, want containing %q", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestRenderTextAlignment(t *testing.T) {
+	marker := color.NRGBA{R: 10, G: 200, B: 10, A: 255}
+
+	parsedFont, err := truetype.Parse(comicSansFont)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dc := gg.NewContext(2390, 1973)
+
+	opts := defaultOptions()
+	opts.text = "Hi"
+	opts.textColor = marker
+	layout := measureText(dc, parsedFont, opts)
+	defer closeFace(layout.face)
+	bubbleX, bubbleY, bubbleW, bubbleH := bubbleBounds(layout, opts)
+	textAreaWidth := bubbleW - 2*opts.padding
+	baseX := bubbleX + opts.padding
+
+	expected := map[gg.Align]float64{
+		gg.AlignLeft:   baseX,
+		gg.AlignCenter: baseX + (textAreaWidth-layout.width)/2,
+		gg.AlignRight:  baseX + textAreaWidth - layout.width,
+	}
+
+	renderAt := func(align gg.Align) image.Image {
+		o := defaultOptions()
+		o.text = "Hi"
+		o.align = align
+		o.textColor = marker
+		img, err := render(o)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return img
+	}
+
+	// firstMarkerX scans only the bubble interior for the first marker-colored
+	// pixel, giving the left edge of the rendered glyph for the given image.
+	firstMarkerX := func(img image.Image) int {
+		minX, minY := int(bubbleX), int(bubbleY)
+		maxX, maxY := int(bubbleX+bubbleW), int(bubbleY+bubbleH)
+		for x := minX; x < maxX; x++ {
+			for y := minY; y < maxY; y++ {
+				r, g, bl, _ := img.At(x, y).RGBA()
+				if r>>8 < 60 && g>>8 > 150 && bl>>8 < 60 {
+					return x
+				}
+			}
+		}
+		return -1
+	}
+
+	for _, align := range []gg.Align{gg.AlignLeft, gg.AlignCenter, gg.AlignRight} {
+		got := firstMarkerX(renderAt(align))
+		want := expected[align]
+		if math.Abs(float64(got)-want) > 10 {
+			t.Errorf("align %v: first marker x = %d, want ~%.1f", align, got, want)
+		}
 	}
 }
 
