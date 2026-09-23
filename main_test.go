@@ -117,6 +117,27 @@ func TestParseOptionsHelpDocumentsMaxima(t *testing.T) {
 	}
 }
 
+func TestParseOptionsHandlesLeadingDashText(t *testing.T) {
+	t.Run("escaped", func(t *testing.T) {
+		opts, err := parseOptions([]string{"--", "-1 apples"}, &bytes.Buffer{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if opts.text != "-1 apples" {
+			t.Fatalf("text = %q, want %q", opts.text, "-1 apples")
+		}
+	})
+	t.Run("unescaped", func(t *testing.T) {
+		_, err := parseOptions([]string{"-1 apples"}, &bytes.Buffer{})
+		if err == nil {
+			t.Fatal("parseOptions unexpectedly succeeded")
+		}
+		if !strings.Contains(err.Error(), "--") {
+			t.Fatalf("error %q does not suggest using --", err.Error())
+		}
+	})
+}
+
 func TestRenderDimensions(t *testing.T) {
 	tests := []struct {
 		name string

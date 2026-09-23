@@ -144,11 +144,15 @@ func parseOptions(args []string, stderr io.Writer) (options, error) {
 	fs.Float64Var(&opts.lineSpacing, "line-spacing", opts.lineSpacing, fmt.Sprintf("multiplier between text lines; maximum %d", maxLineSpacing))
 	fs.Usage = func() {
 		fmt.Fprintln(stderr, `Usage: clippy [options] "Your text here"`)
+		fmt.Fprintln(stderr, `If your text begins with a hyphen, put -- before it: clippy -- "-1 apples"`)
 		fmt.Fprintln(stderr, "Options:")
 		fs.PrintDefaults()
 	}
 
 	if err := fs.Parse(args); err != nil {
+		if strings.HasPrefix(err.Error(), "flag provided but not defined:") {
+			return options{}, fmt.Errorf("%w (if this is message text, put -- before it: clippy -- \"%s\")", err, strings.Join(args, " "))
+		}
 		return options{}, err
 	}
 	if fs.NArg() == 0 {
