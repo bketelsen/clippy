@@ -10,6 +10,9 @@ clippy "My Text Here"
 This outputs a timestamped PNG in the current directory and prints its name.
 Words may be quoted as one argument or supplied separately.
 
+If your message begins with a hyphen, put `--` before it so it isn't
+mistaken for a flag: `clippy -- "-1 apples"`
+
 ### Scaling Options
 
 ```
