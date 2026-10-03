@@ -1,6 +1,14 @@
 # clippy
 Clippy is your friend.  A very helpful friend.
 
+![Clippy's speech bubble reads "It looks like you are writing a README!" next to the Clippy paperclip character](docs/readme-example.png)
+
+Generated with:
+
+```
+clippy -width 600 -output docs/readme-example.png "It looks like you are writing a README!"
+```
+
 ## Usage
 
 ```
