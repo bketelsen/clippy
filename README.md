@@ -38,9 +38,14 @@ wraps at `-text-width`, and oversized messages shrink to fit `-text-height`.
 
 ```
 clippy -font-size 96 -text-color '#336699' "Hello"
+clippy -bubble-color '#336699' "Blue bubble"
+clippy -bubble-color 33669980 "Transparent blue bubble"
 clippy -align center -padding 20 "Centered text"
 clippy -text-x 100 -text-y 100 -text-width 1200 -text-height 400 "Custom box"
 ```
+
+`-bubble-color` accepts RGB (`RRGGBB`) and RGBA (`RRGGBBAA`) hexadecimal
+colors. Its default is `#FFFFBE`, and the leading `#` is optional.
 
 Run `clippy -help` for all available options.
 
